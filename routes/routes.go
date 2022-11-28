@@ -7,6 +7,7 @@ import (
 	"github.com/gorilla/mux"
 	"log"
 	"net/http"
+	"net/url"
 )
 
 const (
@@ -33,6 +34,12 @@ func ShortenUrl(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode("Not a valid url")
 		return
 	}
+	_, err = url.ParseRequestURI(reqUrl.LongUrl)
+	if err != nil {
+		json.NewEncoder(w).Encode("Not a valid url")
+		return
+	}
+
 	var respUrl Url
 	shortUrl, ok := UrlMap[reqUrl.LongUrl]
 	if ok {
