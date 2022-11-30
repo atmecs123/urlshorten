@@ -5,7 +5,6 @@ import (
 	"github.com/asaskevich/govalidator"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
-	"log"
 	"net/http"
 	"net/url"
 )
@@ -27,7 +26,7 @@ func ShortenUrl(w http.ResponseWriter, r *http.Request) {
 	var reqUrl Url
 	err := json.NewDecoder(r.Body).Decode(&reqUrl)
 	if err != nil {
-		json.NewEncoder(w).Encode("Unable to parse the request" + err)
+		json.NewEncoder(w).Encode("Unable to parse the request")
 		return
 	}
 	if reqUrl.LongUrl == "" {
