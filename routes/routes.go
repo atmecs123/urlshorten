@@ -27,8 +27,11 @@ func ShortenUrl(w http.ResponseWriter, r *http.Request) {
 	var reqUrl Url
 	err := json.NewDecoder(r.Body).Decode(&reqUrl)
 	if err != nil {
-		log.Fatal("Unable to decode the url request", err)
+		json.NewEncoder(w).Encode("Unable to parse the request" + err)
 		return
+	}
+	if reqUrl.LongUrl == "" {
+		json.NewEncoder(w).Encode("Empty url in the request")
 	}
 	if !govalidator.IsURL(reqUrl.LongUrl) {
 		json.NewEncoder(w).Encode("Not a valid url")
