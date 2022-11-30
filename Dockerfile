@@ -12,4 +12,4 @@ RUN go mod download
 RUN go build api/main.go
 EXPOSE 9000
 
-CMD ["api/api"]
+ENTRYPOINT [ "/app/main" ]
