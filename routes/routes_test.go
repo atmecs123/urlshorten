@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"github.com/mitchellh/go-homedir"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"net/http/httptest"
@@ -55,6 +56,16 @@ func TestShortenUrl(t *testing.T) {
 }
 
 func TestResolveUrl(t *testing.T) {
+	var urls []Url
+	file, err := ioutil.ReadFile(filepath.Join(urlFilePath, UrlFile))
+	if err != nil {
+		log.Fatalf("Unable to read the url file %v", err)
+	}
+	err = json.Unmarshal([]byte(file), &urls)
+	if err != nil {
+		log.Fatalf("Unable to unmarshal %v", err)
+		return
+	}
 	var urlTests = []struct {
 		id         string
 		statusCode int
@@ -62,13 +73,14 @@ func TestResolveUrl(t *testing.T) {
 		{"32456", http.StatusBadRequest},
 		{"", http.StatusBadRequest},
 	}
-	defer func() {
-		err := os.Remove(filepath.Join(urlFilePath, UrlFile))
-		if err != nil {
-			log.Fatal(err)
-
-		}
-	}()
+	var id string
+	if len(urls) > 1 {
+		id = urls[0].Id
+		urlTests = append(urlTests, struct {
+			id         string
+			statusCode int
+		}{id: id, statusCode: http.StatusFound})
+	}
 	for _, urlId := range urlTests {
 		req, _ := http.NewRequest("GET", "/"+urlId.id, nil)
 		rr := httptest.NewRecorder()

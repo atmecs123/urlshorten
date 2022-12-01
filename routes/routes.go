@@ -66,7 +66,11 @@ func ShortenUrl(urlPath string) http.Handler {
 		}
 		if file.Size() != 0 {
 			file, _ := ioutil.ReadFile(filepath)
-			_ = json.Unmarshal([]byte(file), &urls)
+			if err != nil {
+				w.WriteHeader(http.StatusBadRequest)
+				log.Fatalf("Unable to read the url file %v", err)
+			}
+			err = json.Unmarshal([]byte(file), &urls)
 			if err != nil {
 				w.WriteHeader(http.StatusBadRequest)
 				log.Fatalf("Unable to unmarshal %v", err)
@@ -76,7 +80,6 @@ func ShortenUrl(urlPath string) http.Handler {
 		var respUrl Url
 		for _, url := range urls {
 			if reqUrl.LongUrl == url.LongUrl {
-				w.WriteHeader(http.StatusForbidden)
 				json.NewEncoder(w).Encode("Short url already exists " + url.ShortUrl)
 				return
 			}
