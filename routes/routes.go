@@ -119,17 +119,23 @@ func ResolveUrl(urlPath string) http.Handler {
 			return
 		}
 		var urls []Url
-		file, err := ioutil.ReadFile(filepath)
+		file, err := os.Stat(filepath)
 		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			log.Fatalf("Unable to read the urls file %v", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode("Unable to find the url")
 			return
 		}
-		err = json.Unmarshal([]byte(file), &urls)
-		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			log.Fatalf("Unable to unmarshal urls %v", err)
-			return
+		if file.Size() != 0 {
+			file, err := ioutil.ReadFile(filepath)
+			if err != nil {
+				w.WriteHeader(http.StatusBadRequest)
+				log.Fatalf("Unable to read the urls file %v", err)
+			}
+			err = json.Unmarshal([]byte(file), &urls)
+			if err != nil {
+				w.WriteHeader(http.StatusBadRequest)
+				log.Fatalf("Unable to unmarshal urls %v", err)
+			}
 		}
 
 		var urlFound bool
