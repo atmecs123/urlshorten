@@ -3,12 +3,29 @@ package routes
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
+	"github.com/mitchellh/go-homedir"
 	"log"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 )
 
+var urlFilePath string
+
+func init() {
+	dir, _ := homedir.Dir()
+	fmt.Println("dir is", dir)
+	urlFilePath = filepath.Join(dir, "urls_test")
+	err := os.MkdirAll(urlFilePath, 0744)
+	if err != nil {
+		log.Fatalf("Failed to create directory %v", err)
+	}
+}
 func TestShortenUrl(t *testing.T) {
 	var urlTests = []struct {
 		url            string // input
@@ -33,7 +50,7 @@ func TestShortenUrl(t *testing.T) {
 			t.Errorf("Error creating a new request: %v", err)
 		}
 		rr := httptest.NewRecorder()
-		handler := http.HandlerFunc(ShortenUrl)
+		handler := http.Handler(ShortenUrl(urlFilePath))
 		handler.ServeHTTP(rr, req)
 		if status := rr.Code; status != http.StatusOK {
 			t.Errorf("Handler returned wrong status code. Expected: %d. got : %d.", http.StatusOK, status)
@@ -49,15 +66,20 @@ func TestResolveUrl(t *testing.T) {
 	}{
 		{"32456", "Invalid short url passed"},
 		{"", "No short url id passed"},
+		{"7202c5", ""},
 	}
 
 	for _, urlId := range urlTests {
-		req, err := http.NewRequest("GET", "/"+urlId.id, nil)
+		q := url.Values{}
+		q.Add("id", urlId.id)
+		req, err := http.NewRequest("GET", "/", strings.NewReader(q.Encode()))
+		fmt.Println("my req is", req.URL)
 		if err != nil {
 			t.Errorf("Error creating a new request: %v", err)
 		}
 		rr := httptest.NewRecorder()
-		handler := http.HandlerFunc(ResolveUrl)
+
+		handler := http.Handler(ResolveUrl(urlFilePath))
 		handler.ServeHTTP(rr, req)
 		if status := rr.Code; status != http.StatusOK {
 			t.Errorf("Handler returned wrong status code. Expected: %d. got : %d.", http.StatusOK, status)
