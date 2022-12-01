@@ -5,13 +5,12 @@ import (
 	"fmt"
 	"github.com/asaskevich/govalidator"
 	"github.com/google/uuid"
-	"github.com/gorilla/mux"
 	"io/ioutil"
 	"log"
 	"net/http"
-	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 const (
@@ -42,9 +41,9 @@ func ShortenUrl(urlPath string) http.Handler {
 			json.NewEncoder(w).Encode("Not a valid url")
 			return
 		}
-		_, err = url.ParseRequestURI(reqUrl.LongUrl)
+		_, err = http.Get(reqUrl.LongUrl)
 		if err != nil {
-			json.NewEncoder(w).Encode("Not a valid url")
+			json.NewEncoder(w).Encode("Not a valid url. Please check the url again")
 			return
 		}
 		var urls []Url
@@ -106,8 +105,7 @@ func ShortenUrl(urlPath string) http.Handler {
 func ResolveUrl(urlPath string) http.Handler {
 	handleFunc := func(w http.ResponseWriter, r *http.Request) {
 		filepath := filepath.Join(urlPath, UrlFile)
-		params := mux.Vars(r)
-		id := params["id"]
+		id := strings.TrimPrefix(r.URL.Path, "/")
 		if id == "" {
 			json.NewEncoder(w).Encode("No short url id passed")
 			return
@@ -128,7 +126,7 @@ func ResolveUrl(urlPath string) http.Handler {
 		for _, url := range urls {
 			if url.Id == id {
 				urlFound = true
-				http.Redirect(w, r, url.LongUrl, 401)
+				http.Redirect(w, r, url.LongUrl, 302)
 				return
 			}
 		}
