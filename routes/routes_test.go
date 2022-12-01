@@ -3,7 +3,6 @@ package routes
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"github.com/mitchellh/go-homedir"
 	"log"
 	"net/http"
@@ -17,7 +16,6 @@ var urlFilePath string = ""
 
 func init() {
 	dir, _ := homedir.Dir()
-	fmt.Println("dir is", dir)
 	urlFilePath = filepath.Join(dir, "urls_test")
 	err := os.MkdirAll(urlFilePath, 0744)
 	if err != nil {
@@ -26,13 +24,14 @@ func init() {
 }
 func TestShortenUrl(t *testing.T) {
 	var urlTests = []struct {
-		url            string // input
-		expectedResult string // string
+		url        string // input
+		statusCode int    // string
 
 	}{
-		{"https://www.youtube.com/watch?v=OVBvOuxbpHA", ""},
-		{"https://www.thepolyglotdeveloper.com/", ""},
-		{"https://support.google/", "Not a valid url"},
+		{"https://www.youtube.com/watch?v=OVBvOuxbpHA", http.StatusOK},
+		{"https://support.google/", http.StatusBadRequest},
+		{"https://www.thepolyglotdeveloper.com/", http.StatusOK},
+		{"https://support.goog[]p[]/", http.StatusBadRequest},
 	}
 
 	for _, url := range urlTests {
@@ -50,34 +49,35 @@ func TestShortenUrl(t *testing.T) {
 		rr := httptest.NewRecorder()
 		handler := http.Handler(ShortenUrl(urlFilePath))
 		handler.ServeHTTP(rr, req)
-		if status := rr.Code; status != http.StatusOK {
-			t.Errorf("Handler returned wrong status code. Expected: %d. got : %d.", http.StatusOK, status)
+		if status := rr.Code; status != url.statusCode {
+			t.Errorf("Handler returned wrong status code for url %v Expected: %d. got : %d.", url.url, http.StatusOK, status)
 		}
 	}
 }
 
 func TestResolveUrl(t *testing.T) {
 	var urlTests = []struct {
-		id             string // input
-		expectedResult string // string
+		id         string // input
+		statusCode int    // string
 
 	}{
-		{"32456", "Invalid short url passed"},
-		{"", "No short url id passed"},
+		{"32456", http.StatusBadRequest},
+		{"", http.StatusBadRequest},
 	}
+	defer func() {
+		err := os.Remove(filepath.Join(urlFilePath, UrlFile))
+		if err != nil {
+			log.Fatal(err)
 
+		}
+	}()
 	for _, urlId := range urlTests {
 		req, _ := http.NewRequest("GET", "/"+urlId.id, nil)
-		fmt.Println("my req is", req.URL)
 		rr := httptest.NewRecorder()
 		handler := http.Handler(ResolveUrl(urlFilePath))
 		handler.ServeHTTP(rr, req)
-		if status := rr.Code; status != http.StatusOK {
+		if status := rr.Code; status != urlId.statusCode {
 			t.Errorf("Handler returned wrong status code. Expected: %d. got : %d.", http.StatusOK, status)
-		}
-
-		if urlId.expectedResult != rr.Body.String() {
-			t.Errorf("Handler returned wrong response error. Expected %s and got %s", urlId.expectedResult, rr.Body.String())
 		}
 	}
 }

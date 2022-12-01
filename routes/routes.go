@@ -2,7 +2,6 @@ package routes
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/asaskevich/govalidator"
 	"github.com/google/uuid"
 	"io/ioutil"
@@ -31,26 +30,28 @@ func ShortenUrl(urlPath string) http.Handler {
 		var reqUrl Url
 		err := json.NewDecoder(r.Body).Decode(&reqUrl)
 		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
 			json.NewEncoder(w).Encode("Unable to parse the request")
 			return
 		}
 		if reqUrl.LongUrl == "" {
+			w.WriteHeader(http.StatusBadRequest)
 			json.NewEncoder(w).Encode("Empty url in the request")
+			return
 		}
 		if !govalidator.IsURL(reqUrl.LongUrl) {
+			w.WriteHeader(http.StatusBadRequest)
 			json.NewEncoder(w).Encode("Not a valid url")
 			return
 		}
 		_, err = http.Get(reqUrl.LongUrl)
 		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
 			json.NewEncoder(w).Encode("Not a valid url. Please check the url again")
 			return
 		}
 		var urls []Url
 		_, err = os.Stat(filepath)
-		if err != nil {
-			log.Printf("Unable to stat a file %v creating the file path...", err)
-		}
 		// create file if not exists
 		if os.IsNotExist(err) {
 			var file, err = os.Create(filepath)
@@ -61,12 +62,13 @@ func ShortenUrl(urlPath string) http.Handler {
 		}
 		file, err := os.Stat(filepath)
 		if err != nil {
-			log.Printf("Unable to stat a file %v creating the file path...", err)
+			log.Printf("Unable to stat a file %v. \n  Creating the file path......", err)
 		}
 		if file.Size() != 0 {
 			file, _ := ioutil.ReadFile(filepath)
 			_ = json.Unmarshal([]byte(file), &urls)
 			if err != nil {
+				w.WriteHeader(http.StatusBadRequest)
 				log.Fatalf("Unable to unmarshal %v", err)
 				return
 			}
@@ -74,6 +76,7 @@ func ShortenUrl(urlPath string) http.Handler {
 		var respUrl Url
 		for _, url := range urls {
 			if reqUrl.LongUrl == url.LongUrl {
+				w.WriteHeader(http.StatusForbidden)
 				json.NewEncoder(w).Encode("Short url already exists " + url.ShortUrl)
 				return
 			}
@@ -81,18 +84,19 @@ func ShortenUrl(urlPath string) http.Handler {
 
 		var id string
 		id = uuid.New().String()[:6]
-		newShort := "http://localhost:" + Port + "/" + id
+		shortUrl := "http://localhost:" + Port + "/" + id
 		respUrl.Id = id
 		respUrl.LongUrl = reqUrl.LongUrl
-		respUrl.ShortUrl = newShort
+		respUrl.ShortUrl = shortUrl
 		urls = append(urls, respUrl)
 		data, err := json.MarshalIndent(urls, "", " ")
 		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
 			log.Fatalf("Unable to marshal the urls %v", err)
 		}
-		fmt.Println("Inside else condition")
 		err = ioutil.WriteFile(filepath, data, 0644)
 		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
 			log.Fatalf("Unable to write to the file %v", err)
 		}
 		json.NewEncoder(w).Encode(respUrl)
@@ -107,17 +111,20 @@ func ResolveUrl(urlPath string) http.Handler {
 		filepath := filepath.Join(urlPath, UrlFile)
 		id := strings.TrimPrefix(r.URL.Path, "/")
 		if id == "" {
-			json.NewEncoder(w).Encode("No short url id passed")
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode("No short url id in path")
 			return
 		}
 		var urls []Url
 		file, err := ioutil.ReadFile(filepath)
 		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
 			log.Fatalf("Unable to read the urls file %v", err)
 			return
 		}
 		err = json.Unmarshal([]byte(file), &urls)
 		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
 			log.Fatalf("Unable to unmarshal urls %v", err)
 			return
 		}
@@ -131,7 +138,8 @@ func ResolveUrl(urlPath string) http.Handler {
 			}
 		}
 		if !urlFound {
-			json.NewEncoder(w).Encode("Invalid short url passed")
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode("Invalid short url")
 		}
 	}
 	return http.HandlerFunc(handleFunc)
