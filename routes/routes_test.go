@@ -24,9 +24,8 @@ func init() {
 }
 func TestShortenUrl(t *testing.T) {
 	var urlTests = []struct {
-		url        string // input
-		statusCode int    // string
-
+		url        string
+		statusCode int
 	}{
 		{"https://www.youtube.com/watch?v=OVBvOuxbpHA", http.StatusOK},
 		{"https://support.google/", http.StatusBadRequest},
@@ -57,9 +56,8 @@ func TestShortenUrl(t *testing.T) {
 
 func TestResolveUrl(t *testing.T) {
 	var urlTests = []struct {
-		id         string // input
-		statusCode int    // string
-
+		id         string
+		statusCode int
 	}{
 		{"32456", http.StatusBadRequest},
 		{"", http.StatusBadRequest},
