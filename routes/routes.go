@@ -23,9 +23,16 @@ type Url struct {
 	ShortUrl string `json:"shortUrl"`
 }
 
+func handleUrlShortner() {
+	if r := recover(); r != nil {
+		log.Printf("Recovering the exception case:", r)
+	}
+}
+
 // ShortenUrl is handler to shorten the long url and in response sends id,longUrl,shortUrl
 func ShortenUrl(urlPath string) http.Handler {
 	handleFunc := func(w http.ResponseWriter, r *http.Request) {
+		defer handleUrlShortner()
 		filepath := filepath.Join(urlPath, UrlFile)
 		var reqUrl Url
 		err := json.NewDecoder(r.Body).Decode(&reqUrl)
@@ -111,6 +118,7 @@ func ShortenUrl(urlPath string) http.Handler {
 // ResolveUrl handler resolves the short or custom url to actual long url
 func ResolveUrl(urlPath string) http.Handler {
 	handleFunc := func(w http.ResponseWriter, r *http.Request) {
+		defer handleUrlShortner()
 		filepath := filepath.Join(urlPath, UrlFile)
 		id := strings.TrimPrefix(r.URL.Path, "/")
 		if id == "" {
