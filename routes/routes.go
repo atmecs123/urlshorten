@@ -143,7 +143,7 @@ func ResolveUrl(urlPath string) http.Handler {
 			if url.Id == id {
 				urlFound = true
 				http.Redirect(w, r, url.LongUrl, 302)
-				return
+				break
 			}
 		}
 		if !urlFound {
